@@ -1,3 +1,10 @@
 */__pycache__
+*\__pycache__
 OpticalFlow_Phase/checkpoints
 OpticalFlow_Phase/data
+Vid2Vid_Phase/checkpoints
+Vid2Vid_Phase/dataset
+Vid2Vid_Phase/groundtruths
+Vid2Vid_Phase/results
+Vid2Vid_Phase/saved_models
+Vid2Vid_Phase/video

@@ -1,0 +1,23 @@
+# v2c
+python train.py --dataroot path/to/data/ --model unsup_single --dataset_mode unaligned_scale --name v2c_experiment --loadSizeW 542 --loadSizeH 286 --resize_mode rectangle --fineSizeW 512 --fineSizeH 256 --crop_mode rectangle --which_model_netG resnet_6blocks --no_dropout --pool_size 0 --lambda_spa_unsup_A 10 --lambda_spa_unsup_B 10 --lambda_unsup_cycle_A 10 --lambda_unsup_cycle_B 10 --lambda_cycle_A 0 --lambda_cycle_B 0 --lambda_content_A 1 --lambda_content_B 1 --batchSize 1 --noise_level 0.001  --niter_decay 0 --niter 2
+python test.py --dataroot path/to/data/ --model unsup_single --dataset_mode unaligned_scale --name v2c_experiment --loadSizeW 512 --loadSizeH 256 --resize_mode rectangle --fineSizeW 512 --fineSizeH 256 --crop_mode none --which_model_netG resnet_6blocks --no_dropout --which_epoch 2
+
+# v2l
+python train.py --dataroot path/to/data/ --model unsup_single --dataset_mode unaligned_scale --name v2l_experiment --loadSizeW 286 --loadSizeH 286 --resize_mode rectangle --fineSizeW 256 --fineSizeH 256 --crop_mode rectangle --which_model_netG resnet_6blocks --no_dropout --pool_size 0 --lambda_spa_unsup_A 10 --lambda_spa_unsup_B 0 --lambda_unsup_cycle_A 0 --lambda_unsup_cycle_B 10 --lambda_cycle_A 10 --lambda_cycle_B 10 --lambda_content_A 0 --lambda_content_B 0 --batchSize 1 --noise_level 0.001  --niter_decay 0 --niter 5
+python test.py --dataroot path/to/data/ --model unsup_single --dataset_mode unaligned_scale --name v2l_experiment --loadSizeW 256 --loadSizeH 256 --resize_mode rectangle --fineSizeW 256 --fineSizeH 256 --crop_mode none --which_model_netG resnet_6blocks --no_dropout --which_epoch 5
+
+
+# python train.py --dataroot dataset/ --model unsup_single --dataset_mode unaligned_scale --name first_experiments --loadSizeW 542 --loadSizeH 286 --resize_mode rectangle --fineSizeW 512 --fineSizeH 256 --crop_mode rectangle --which_model_netG resnet_6blocks --no_dropout --pool_size 0 --lambda_spa_unsup_A 10 --lambda_spa_unsup_B 10 --lambda_unsup_cycle_A 10 --lambda_unsup_cycle_B 10 --lambda_cycle_A 0 --lambda_cycle_B 0 --lambda_content_A 1 --lambda_content_B 1 --batchSize 1 --noise_level 0.001  --niter_decay 0 --niter 2
+
+# ours
+# --epoch_count stage1@latest400002 --itr_count 28000 --continue_train
+python train.py --dataroot dataset/day-to-rain --model flow_cyclegan --dataset_mode unaligned_flow --name stage2_exp1 --identity 0.5 --lambda_content_A 1 --loadSizeW 542 --loadSizeH 286 --resize_mode rectangle --fineSizeW 512 --fineSizeH 256 --crop_mode rectangle --which_model_netG resnet_6blocks --no_dropout --pool_size 0 --batchSize 1 --noise_level 0.001  --niter_decay 0 --niter 400
+python train.py --dataroot dataset/day-to-rain --model few_shot_cyclegan --dataset_mode unaligned_scale_clip --name stage1_exp2 --identity 0.5 --lambda_content_A 1 --loadSizeW 542 --loadSizeH 286 --resize_mode rectangle --fineSizeW 512 --fineSizeH 256 --crop_mode rectangle --which_model_netG resnet_6blocks --no_dropout --pool_size 0 --batchSize 1 --noise_level 0.001  --niter_decay 0 --niter 400
+ python test.py --dataroot dataset/day-to-rain --model flow_cyclegan --dataset_mode unaligned_flow --name stage2_exp4 --which_epoch stage1@latest400002 --loadSizeW 512 --loadSizeH 256 --resize_mode rectangle --fineSizeW 512 --fineSizeH 256 --crop_mode none --which_model_netG resnet_6blocks --no_dropout
+
+
+python test.py --dataroot dataset/day-to-rain --model flow_cyclegan --dataset_mode unaligned_flow --name stage2_exp1 --which_epoch stage1@latest400002 --loadSizeW 512 --loadSizeH 256 --resize_mode rectangle --fineSizeW 512 --fineSizeH 256 --crop_mode none --which_model_netG resnet_6blocks --no_dropout
+
+python test.py --dataroot dataset/day-to-rain --model few_shot_cyclegan --dataset_mode unaligned_scale --name stage1_exp2 --which_epoch stage1@latest240001 --loadSizeW 512 --loadSizeH 256 --resize_mode rectangle --fineSizeW 512 --fineSizeH 256 --crop_mode none --which_model_netG resnet_6blocks --no_dropout
+
+
