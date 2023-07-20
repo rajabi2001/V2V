@@ -20,9 +20,6 @@ class UnalignedFlowDataset(BaseDataset):
         if opt.phase == "test":
             self.dir_A = os.path.join(opt.dataroot, "val/A")
             self.dir_B = os.path.join(opt.dataroot, "val/B")
-        # else:
-        #     self.dir_A = os.path.join(opt.dataroot, opt.split, "A")
-        #     self.dir_B = os.path.join(opt.dataroot, opt.split, "B")
 
         self.A_paths = make_dataset(self.dir_A)
         self.B_paths = make_dataset(self.dir_B)
@@ -41,7 +38,6 @@ class UnalignedFlowDataset(BaseDataset):
 
     def __getitem__(self, index):
         
-
         index_A2 = index % self.A_size
         index_A1 = index_A2 - 1
         if index_A1 < 0:
@@ -66,7 +62,7 @@ class UnalignedFlowDataset(BaseDataset):
         A1_img = Image.open(A1_path).convert('RGB')
         B_img = Image.open(B_path).convert('RGB')
 
-        # resize A
+        # resize A*
         if self.opt.resize_mode == "scale_shortest":
             w, h = A2_img.size
             if w >= h: 
@@ -101,7 +97,7 @@ class UnalignedFlowDataset(BaseDataset):
         A2_img = self.transform(A2_img)
         A1_img = self.transform(A1_img)
 
-        # crop
+        # crop A*
         w = A2_img.size(2)
         h = A2_img.size(1)
         if self.opt.crop_mode == "square":
@@ -120,13 +116,6 @@ class UnalignedFlowDataset(BaseDataset):
         A1_img = A1_img[:, h_offset:h_offset + fineSizeH, w_offset:w_offset + fineSizeW]
         A2_flow = A2_flow[:, h_offset:h_offset + fineSizeH, w_offset:w_offset + fineSizeW]
         A1_flow = A1_flow[:, h_offset:h_offset + fineSizeH, w_offset:w_offset + fineSizeW]
-
-        # A2_flow = np.array(A2_flow).astype(np.uint8)[..., :3]
-        # A1_flow = np.array(A1_flow).astype(np.uint8)[..., :3]
-        # A2_flow = cv2.resize(A2_flow, dsize=(512, 256), interpolation=cv2.INTER_CUBIC)
-        # A1_flow = cv2.resize(A1_flow, dsize=(512, 256), interpolation=cv2.INTER_CUBIC)
-        # A2_flow = torch.from_numpy(A2_flow).permute(2, 0, 1).float()
-        # A1_flow = torch.from_numpy(A1_flow).permute(2, 0, 1).float()
         
         # resize B
         if self.opt.resize_mode == "scale_shortest":
