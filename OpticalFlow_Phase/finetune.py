@@ -180,23 +180,8 @@ def finetune(args):
     model.cuda()
     model.train()
 
-    # model_vss_dict = {'arch': 'td4_psp', 'backbone': 'resnet18', 'syncBN': False, 'path_num': 4}
-    # model_vss = get_model(model_vss_dict, nclass=23).to(device)
-    # vss_ckp_path = "./checkpoint/viper_td4-psp18_base.pth"
-    # state = torch.load(vss_ckp_path)
-    # model_vss.load_state_dict(state, strict=False)
-    # print("Initialized vss networks with pretrained '{}'".format(vss_ckp_path))
-    # model_vss.eval()
-    # model_vss.to(device)
-
-    # n_min = args.batch_size * 256 * 512 // 16
-    # ignore_index = 250
-    # ceLoss = OhemCELoss2D(n_min=n_min, ignore_index=ignore_index)
-
     data_path = 'data/viper_day_rain'
-
     path_n = 4
-
     t_loader = ViperLoader(data_path, split='train', path_num=path_n, bw=args.bwflow)
 
     train_loader = data.DataLoader(t_loader, batch_size=args.batch_size,
@@ -211,30 +196,20 @@ def finetune(args):
     for data_blob in tqdm(train_loader):
         cnt_iter += 1
 
-
-        # img_vss, data_of = data_blob
         preds, data_of = data_blob
 
         image1, image2, flow, valid = [x.cuda() for x in data_of]
         pred_vss1, pred_vss2 = [x for x in preds]
-        # img_vss = [x.to(device) for x in img_vss]
-
-        # outputs = model_vss(imgs_vss,pos_id=cnt_iter%path_n)
-        # pred_vss = outputs.data.max(1)[1]
 
         optimizer.zero_grad()
         flow_pred = model(image1, image2)
 
-        # s_loss = sequence_loss(flow_pred, flow, valid, args.gamma)  # loss GT
-        # a_loss = compute_adjacency_loss(flow_pred[-1].permute(0,2,3,1), pred_vss1)  # loss 1
+        a_loss = compute_adjacency_loss(flow_pred[-1].permute(0,2,3,1), pred_vss1)  # loss 1
         seg_loss = compute_seg_loss(pred_vss1, flow_pred[-1], pred_vss2) # loss 2
         unsup_loss = compute_unsup_loss(image1, image2, flow_pred[-1]) # loss unsup
 
-        # loss = s_loss + args.a*a_loss + args.b*seg_loss + args.c*unsup_loss
-        loss =  args.c*unsup_loss + args.b*seg_loss
+        loss = args.a*a_loss + args.b*seg_loss + args.c*unsup_loss
 
-
-        
         scaler.scale(loss).backward()
         scaler.unscale_(optimizer)
 
@@ -243,8 +218,6 @@ def finetune(args):
         scheduler.step()
         scaler.update()
 
-    
-    # PATH = args.output + f'/{cnt_iter}_{args.name}.pth'
     PATH = args.output + f'/{args.name}.pth'
     torch.save(model.state_dict(), PATH)
         
