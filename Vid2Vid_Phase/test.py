@@ -148,7 +148,7 @@ if __name__ == '__main__':
 
     test()
     print('Warping error:', evaluate_warping_error(500))
-    print('mFiD score:', evaluate_mfid('rain', 100, 300))
+    print('mFiD score:', evaluate_mfid('rain', 50, 300))
 
     # metrics = Metrics()
     # metrics.cal_cls_l2v(checkpoint_name)
