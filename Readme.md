@@ -1,6 +1,6 @@
 # An ongoing project
 
-## Working on a project about video-to-video translation Improving the temporal and spatial consistency in video-to-video translation
+## Working on a project about video-to-video translation while improving the temporal and spatial consistency by optical flow and video semantic segmentation
 
 original_video_day:
 
