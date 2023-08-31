@@ -2,6 +2,7 @@
 *\__pycache__
 OpticalFlow_Phase/checkpoints
 OpticalFlow_Phase/data
+OpticalFlow_Phase/finetune.sh
 Vid2Vid_Phase/checkpoints
 Vid2Vid_Phase/dataset
 Vid2Vid_Phase/groundtruths

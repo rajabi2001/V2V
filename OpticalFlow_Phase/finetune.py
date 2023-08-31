@@ -35,11 +35,11 @@ def convert_flow_to_image(image1, flow):
 def count_parameters(model):
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
-def fetch_optimizer(args, model):
+def fetch_optimizer(args, model, num_steps):
     """ Create the optimizer and learning rate scheduler """
     optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wdecay, eps=args.epsilon)
 
-    scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, max_lr=args.lr, total_steps=args.num_steps+100,
+    scheduler = optim.lr_scheduler.OneCycleLR(optimizer=optimizer, max_lr=args.lr, total_steps=num_steps+100,
                                               pct_start=0.05, cycle_momentum=False, anneal_strategy='linear')
 
     return optimizer, scheduler
@@ -137,7 +137,7 @@ def compute_adjacency_loss(pred_flow, pred_vss):
         shifted_pred = torch.tensor(shift_matrix(pred_flow_detached, a, np.array([0,0])))
         loss[i] = masks[i] * torch.sum((pred_flow - shifted_pred)**2, dim=3).sqrt()
     
-    return loss.float().mean().cuda()
+    return loss.float().mean()
 
 def compute_seg_loss(pred, flow, lbl):
 
@@ -177,49 +177,52 @@ def finetune(args):
     if args.restore_ckpt is not None:
         model.load_state_dict(torch.load(args.restore_ckpt), strict=False)
 
-    model.cuda()
+    model.to(device)
     model.train()
 
-    data_path = 'data/viper_day_rain'
+    data_path = args.root
     path_n = 4
-    t_loader = ViperLoader(data_path, split='train', path_num=path_n, bw=args.bwflow)
+    t_loader = ViperLoader(data_path, split='train', path_num=path_n)
 
     train_loader = data.DataLoader(t_loader, batch_size=args.batch_size,
                                    pin_memory=True, shuffle=True, num_workers=4, drop_last=True)
     
-    optimizer, scheduler = fetch_optimizer(args, model)
+    num_steps = len(train_loader) * args.epoch
+    optimizer, scheduler = fetch_optimizer(args, model, num_steps)
 
     scaler = GradScaler(enabled=args.mixed_precision)
 
     cnt_iter = 0
 
-    for data_blob in tqdm(train_loader):
-        cnt_iter += 1
+    for e in range(args.epoch):
+        for data_blob in tqdm(train_loader):
+            cnt_iter += 1
 
-        preds, data_of = data_blob
+            preds, data_of = data_blob
 
-        image1, image2, flow, valid = [x.cuda() for x in data_of]
-        pred_vss1, pred_vss2 = [x for x in preds]
+            image1, image2 = [x.to(device) for x in data_of]
+            pred_vss1, pred_vss2 = [x for x in preds]
 
-        optimizer.zero_grad()
-        flow_pred = model(image1, image2)
+            optimizer.zero_grad()
+            flow_pred = model(image1, image2)
 
-        a_loss = compute_adjacency_loss(flow_pred[-1].permute(0,2,3,1), pred_vss1)  # loss 1
-        seg_loss = compute_seg_loss(pred_vss1, flow_pred[-1], pred_vss2) # loss 2
-        unsup_loss = compute_unsup_loss(image1, image2, flow_pred[-1]) # loss unsup
+            a_loss = compute_adjacency_loss(flow_pred[-1].permute(0,2,3,1), pred_vss1).to(device)  # loss 1
+            seg_loss = compute_seg_loss(pred_vss1, flow_pred[-1], pred_vss2) # loss 2
+            unsup_loss = compute_unsup_loss(image1, image2, flow_pred[-1]) # loss unsup
 
-        loss = args.a*a_loss + args.b*seg_loss + args.c*unsup_loss
+            loss = args.a*a_loss + args.b*seg_loss + args.c*unsup_loss
 
-        scaler.scale(loss).backward()
-        scaler.unscale_(optimizer)
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
 
-        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        scaler.step(optimizer)
-        scheduler.step()
-        scaler.update()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+            scaler.step(optimizer)
+            scheduler.step()
+            scaler.update()
 
-    PATH = args.output + f'/{args.name}.pth'
-    torch.save(model.state_dict(), PATH)
+        if e > 0:
+            PATH = args.output + f'/{args.name}_e{e+1}.pth'
+            torch.save(model.state_dict(), PATH)
         
 
 if __name__ == "__main__":
@@ -228,9 +231,10 @@ if __name__ == "__main__":
     parser.add_argument('--name', default='bla', help="name your experiment")
     parser.add_argument('--restore_ckpt', help="restore checkpoint")
     parser.add_argument('--output', type=str, default='checkpoints', help='output directory to save checkpoints and plots')
+    parser.add_argument('--root', type=str, default='data path')
 
     parser.add_argument('--lr', type=float, default=0.00002)
-    parser.add_argument('--num_steps', type=int, default=100000)
+    parser.add_argument('--epoch', type=int, default=3)
     parser.add_argument('--batch_size', type=int, default=6)
     parser.add_argument('--image_size', type=int, nargs='+', default=[384, 512])
     parser.add_argument('--gpus', type=int, nargs='+', default=[0, 1])
@@ -264,9 +268,6 @@ if __name__ == "__main__":
                         help='backward seg loss')
     parser.add_argument('--c', default=0.01, type=int,
                         help='backward unsup loss')
-    parser.add_argument('--bwflow', default=False, action='store_true',
-                        help='backward optical flow')
-
 
     args = parser.parse_args()
 

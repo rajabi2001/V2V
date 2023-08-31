@@ -8,24 +8,28 @@ import imageio
 from ptsemseg.models import get_model
 from tqdm import tqdm
 from datasets import ViperLoader
+import argparse
 
-if __name__ == "__main__":
+if __name__ == "__main__": 
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', type=str, default="data/")
+    parser.add_argument('--split', type=str, default="train")
+    args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    root="data/viper_day_rain"
-    split="train"
+    root = args.root
+    split = args.split
     s_path = f"{root}/{split}/img/"
     d_path = f"{root}/{split}/pred/"
     for i in os.listdir(s_path):
         os.makedirs(d_path+i, exist_ok=True)
-
-
-    data_path = 'data/viper_day_rain'
-
+  
+    data_path = root
     path_n = 4
 
-    t_loader = ViperLoader(data_path, split='train', path_num=path_n)
+    t_loader = ViperLoader(data_path, split='train', path_num=path_n, pred_vss=True)
 
     train_loader = data.DataLoader(t_loader, batch_size=4,
                                    pin_memory=True, shuffle=True, num_workers=4, drop_last=True)

@@ -23,8 +23,8 @@ class ViperLoader(data.Dataset):
         split="train",
         interval=2,
         path_num=4,
-        bw = False,
-        pred_vss = True,
+        n_classes=23,
+        pred_vss = False,
         size = [256,512]
     ):
         """__init__
@@ -39,11 +39,11 @@ class ViperLoader(data.Dataset):
         self.interval = interval
         self.root = root
         self.split = split
-        self.n_classes = 23
-        self.bw = bw
+        self.n_classes = n_classes
         self.size = size
         self.pred_vss = pred_vss
         self.files = {}
+        self.to_tensor = transforms.ToTensor()
 
         aug_params_of = {'crop_size': self.size, 'min_scale': -0.8, 'max_scale': 0.1, 'do_flip': False}
         self.augmentor = SparseFlowAugmentor(**aug_params_of)
@@ -87,32 +87,41 @@ class ViperLoader(data.Dataset):
         f3_img = imageio.imread(f3_path)
         f3_img = np.array(f3_img, dtype=np.uint8)
 
-        if self.bw == True:
-            img1 = f4_img
-            img2 = f3_img
-        else:
-            img1 = f3_img
-            img2 = f4_img
+        if self.pred_vss:
+            f2_id = f3_id - 1
+            f1_id = f2_id - 1
 
- 
-        if self.bw == True:
-            pred1_path = f4_path.replace("img","pred")
-            pred2_path = f3_path.replace("img","pred")
-            flow_path = f4_path.replace("img","flowbw").replace("jpg","npz")
-        else:
-            pred1_path = f3_path.replace("img","pred")
-            pred2_path = f4_path.replace("img","pred")
-            flow_path = f3_path.replace("img","flow").replace("jpg","npz")
+            f2_path = os.path.join(self.images_base, folder, ("%s_%05d.jpg" % (folder, f2_id)))
+            if not os.path.isfile(f2_path):
+                f2_path = f4_path
+            f2_img = imageio.imread(f2_path)
+            f2_img = np.array(f2_img, dtype=np.uint8)
+
+            f1_path = os.path.join(self.images_base, folder, ("%s_%05d.jpg" % (folder, f1_id)))
+            if not os.path.isfile(f1_path):
+                f1_path = f4_path
+            f1_img = imageio.imread(f1_path)
+            f1_img = np.array(f1_img, dtype=np.uint8)
+
+            [f4_img, f3_img, f2_img, f1_img], _ = self.augmentations([f4_img, f3_img, f2_img, f1_img], f4_img[:,:,0])
+
+            f4_img = self.to_tensor(f4_img).float()
+            f3_img = self.to_tensor(f3_img).float()
+            f2_img = self.to_tensor(f2_img).float()
+            f1_img = self.to_tensor(f1_img).float()
+
+            return [f1_img, f2_img, f3_img, f4_img], f4_path
+
+        img1 = f3_img
+        img2 = f4_img
+        pred1_path = f3_path.replace("img","pred")
+        pred2_path = f4_path.replace("img","pred")
 
         if self.split == "train":
             pred1 = imageio.imread(pred1_path)
             pred1 = np.array(pred1, dtype=np.uint8)
-
             pred2 = imageio.imread(pred2_path)
             pred2 = np.array(pred2, dtype=np.uint8)
-
-
-        flow, valid = readFlowNpz(flow_path)
 
         # grayscale images
         if len(f4_img.shape) == 2:
@@ -122,27 +131,18 @@ class ViperLoader(data.Dataset):
             img1 = img1[..., :3]
             img2 = img2[..., :3]
 
-        flow = np.array(flow).astype(np.float32)
-
         if self.split == "train":
-            img1, img2, flow, valid, pred1, pred2 = self.augmentor(img1, img2, flow, valid, pred1, pred2)
+            img1, img2, pred1, pred2 = self.augmentor(img1, img2, mask1=pred1, mask2=pred2)
         else:
-            img1, img2, flow, valid = self.augmentor(img1, img2, flow, valid)
+            img1, img2 = self.augmentor(img1, img2)
 
         img1 = torch.from_numpy(img1).permute(2, 0, 1).float()
         img2 = torch.from_numpy(img2).permute(2, 0, 1).float()
-        flow = torch.from_numpy(flow).permute(2, 0, 1).float()
 
-        if valid is not None:
-            valid = torch.from_numpy(valid)
-        else:
-            valid = (flow[0].abs() < 1000) & (flow[1].abs() < 1000)
-
-        
         if self.split == "train":
-            return [pred1, pred2], [img1, img2, flow, valid.float()]
+            return [pred1, pred2], [img1, img2]
         else:
-            return [img1, img2, flow, valid.float()]
+            return [img1, img2]
 
 
             
