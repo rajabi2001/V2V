@@ -1,3 +1,0 @@
-visdom
-dominate
-opencv-python-headless

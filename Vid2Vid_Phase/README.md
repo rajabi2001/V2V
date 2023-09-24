@@ -1,17 +1,4 @@
-# Unsupervised Recycle-GAN
-Code for [Learning Temporally and Semantically Consistent Unpaired Video-to-video Translation Through Pseudo-Supervision From Synthetic Optical Flow](https://arxiv.org/pdf/2201.05723.pdf), AAAI 2022
-
-# Introduction
-
-Our Unsupervised Recycle-GAN seeks to improve the quality of translation in the unpaired video-to-video translation task and address the temporal and semantic inconsistency issues leveraging pseudo-supervision from synthetic optical flow.
-
-![Overall](figs/fig1.png)
-
-Our Unsupervised Recycle-GAN includes a branch of unsupervised recycle loss and a branch of unsupervised spatial loss that provide more accurate and efficient spatiotemporal consistency constraints during the adversarial training. Built on the basis of an unpaired image-to-image translation framework (Cycle-GAN in this example), our method can effectively improve the temproal and semantic consistency in the resulting videos. 
-
-![Losses](figs/fig2.png)
-
-# Usage
+# Vid2Vid_Phase
 
 **Data Preparation**
 
@@ -43,26 +30,15 @@ python test.py --dataroot path/to/data/ --model unsup_single --dataset_mode unal
    
 **Pretrained Models**
 
-Pretrained models in both experiments are available [here](https://drive.google.com/file/d/1-kcLQLBNk5pOMcdAYPnIQAhA-Kg6_jA5/view?usp=sharing).
+Pretrained models in both experiments are available [here]().
 
 **Evaluation**
 
-Pretrained FCN model is available [here](https://drive.google.com/file/d/1NmeC32gGoKqitxBax21-FaAKL_cBwwqg/view?usp=sharing). Please place it under .saved_models/.
+<!-- Pretrained FCN model is available [here](https://drive.google.com/file/d/1NmeC32gGoKqitxBax21-FaAKL_cBwwqg/view?usp=sharing). Please place it under .saved_models/.
 ```
 python util/eval_rgb2lbl.py --exp_name path/to/test_output/images/\*fake_B.\* --map_cache_dir seg_map_cache
 python util/eval_lbl2rgb.py --exp_name path/to/test_output/images/\*fake_A\* --pred_cache_dir pred_map_cache --mean False --model_path saved_models/fcn_model.pt
-```
-
-# Citation
-```
-@article{Wang_Akash_Misu_2022, 
-title={Learning Temporally and Semantically Consistent Unpaired Video-to-video Translation Through Pseudo-Supervision From Synthetic Optical Flow}, 
-journal={Proceedings of the AAAI Conference on Artificial Intelligence}, 
-author={Wang, Kaihong and Akash, Kumar and Misu, Teruhisa}, 
-year={2022}, 
-}
-```
+``` -->
              
 **Acknowledgment**
 
-Code borrowed from [Recycle-GAN](https://github.com/aayushbansal/Recycle-GAN/), and [ReReVST](https://github.com/daooshee/ReReVST-Code/). We especially thank Dr. Aayush Bansal for his helps!
