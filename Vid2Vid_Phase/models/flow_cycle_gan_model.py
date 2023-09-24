@@ -269,10 +269,6 @@ class FlowCycleGANModel(BaseModel):
         
         ret_visuals = OrderedDict([('real_A', real_A), ('fake_B', fake_B)])
 
-        if self.isTrain:
-            predicted_B = util.tensor2im(self.predicted_B.detach())
-            ret_visuals['predicted_B'] = predicted_B
-
         if not self.idt_A is None and self.isTrain:
             ret_visuals['idt_A'] = util.tensor2im(self.idt_A)
             ret_visuals['idt_B'] = util.tensor2im(self.idt_B)
