@@ -54,4 +54,9 @@ class TrainOptions(BaseOptions):
                             help='number of heads in attention and aggregation')
         self.parser.add_argument('--mixed_precision', default=False, action='store_true',help='use mixed precision')
 
+        self.parser.add_argument('--continual', default=False, action='store_true',help='Continual Learning')
+        self.parser.add_argument('--memory_path', default='./dataset/memory', type=str ,help='path to memory images')
+        self.parser.add_argument('--continual_freq', default=3, type=int ,help='continual frequency of training memory images, a number out of 10')
+        self.parser.add_argument('--artifcial_batch', default=10, type=int ,help='input artifcial batch size')
+
         self.isTrain = True

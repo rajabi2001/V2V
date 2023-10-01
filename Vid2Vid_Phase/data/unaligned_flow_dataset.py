@@ -4,22 +4,33 @@ import torchvision.transforms as transforms
 from data.base_dataset import BaseDataset, get_transform
 from data.image_folder import make_dataset
 from PIL import Image
-import PIL
 import random
 import torch
-import cv2
+from ofe_core.network import RAFTGMA
+import torch.nn as nn
+import util.util as util
 
 class UnalignedFlowDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.root = opt.dataroot
-        # if opt.split == "":
-        if opt.phase == "train":
+        self.phase = opt.phase
+        
+        if self.phase == "train":
             self.dir_A = os.path.join(opt.dataroot, "train/A")
             self.dir_B = os.path.join(opt.dataroot, "train/B")
-        if opt.phase == "test":
+        elif self.phase == "test":
             self.dir_A = os.path.join(opt.dataroot, "val/A")
             self.dir_B = os.path.join(opt.dataroot, "val/B")
+        elif self.phase == "memory":
+            self.dir_A = os.path.join(opt.dataroot, "memory/A")
+            self.dir_B = os.path.join(opt.dataroot, "memory/B")
+            self.counter = 0
+            self.netOFE = nn.DataParallel(RAFTGMA(opt), device_ids=opt.gpu_ids)
+            if opt.ofe_ckpt is not None:
+                self.netOFE.load_state_dict(torch.load(opt.ofe_ckpt), strict=False)
+            self.netOFE.cuda()
+            self.netOFE.eval()
 
         self.A_paths = make_dataset(self.dir_A)
         self.B_paths = make_dataset(self.dir_B)
@@ -42,17 +53,18 @@ class UnalignedFlowDataset(BaseDataset):
         index_A1 = index_A2 - 1
         if index_A1 < 0:
             index_A1 = index_A2
+        assert not(self.phase == "memory" and index_A2 % 2 != 0), "index should be multiple of 2"
 
         A2_path = self.A_paths[index_A2]
         A1_path = self.A_paths[index_A1]
 
-        if self.opt.phase == "train":
+        if self.phase == "train":
             A2_video = A2_path.split(".")[0].split("/")[3].split("_")[0]
             A1_video = A1_path.split(".")[0].split("/")[3].split("_")[0]
             if A2_video != A1_video:
                 A1_path = A2_path
 
-        if self.opt.serial_batches:
+        if self.opt.serial_batches or self.phase == "memory":
             index_B = index % self.B_size
         else:
             index_B = random.randint(0, self.B_size - 1)
@@ -157,10 +169,30 @@ class UnalignedFlowDataset(BaseDataset):
 
         B_img = B_img[:, h_offset:h_offset + fineSizeH, w_offset:w_offset + fineSizeW]
 
-        input_nc = self.opt.input_nc
-        output_nc = self.opt.output_nc
+        return {'A1': A1_img, 'A2': A2_img, 'B1': B_img, 'A1_flow': A1_flow, 'A2_flow': A2_flow}
 
-        return {'A1': A1_img, 'A2': A2_img, 'B1': B_img, 'A1_flow': A1_flow, 'A2_flow': A2_flow, 'A1_paths': A1_path, 'A2_paths': A2_path, 'B_paths': B_path}
+    def memory_get_item(self):
+
+        if self.counter % 5 == 0:
+            index = (self.counter // 5) * 2 + 1
+            data = self(index)
+            self.B = data["B1"]
+            self.A1_flow = data["A1_flow"]
+            self.A2_flow = data["A2_flow"]
+        else:
+            _, flow_pr = self.netOFE(self.A1_flow, self.A2_flow, iters=6, test_mode=True)
+            flow = flow_pr[0]
+            flow_to_warp = flow.detach().cpu().numpy()
+            warped_A3 = util.warp(self.A2_flow.cpu(), flow_to_warp)
+
+            self.A1_flow = self.A2_flow
+            self.A2_flow = warped_A3.cuda()
+            A1_img = self.transform(self.A1_flow)
+            A2_img = self.transform(self.A2_flow)
+            data = {'A1': A1_img, 'A2': A2_img, 'B1': self.B, 'A1_flow': self.A1_flow, 'A2_flow': self.A2_flow}
+
+        self.counter += 1
+        return data
 
     def __len__(self):
         return max(self.A_size, self.B_size)

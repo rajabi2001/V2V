@@ -25,6 +25,7 @@ class FlowCycleGANModel(BaseModel):
 
         nb = opt.batchSize
         size = opt.fineSize
+        self.opt = opt
 
         self.input_A = self.Tensor(nb, opt.input_nc, size, size)
         self.input_A1 = self.Tensor(nb, opt.input_nc, size, size)
@@ -121,7 +122,7 @@ class FlowCycleGANModel(BaseModel):
         self.input_A2_flow.resize_(input_A.size()).copy_(input_A2_flow)
         self.input_B.resize_(input_B.size()).copy_(input_B)
 
-        self.image_paths = input['A2_paths' if AtoB else 'B_paths']
+        # self.image_paths = input['A2_paths' if AtoB else 'B_paths']
 
     def forward(self):
         self.real_A = Variable(self.input_A)
@@ -239,17 +240,21 @@ class FlowCycleGANModel(BaseModel):
         self.loss_cycle_A = loss_cycle_A.item()
         self.loss_flow = loss_flow.item()
 
-    def optimize_parameters(self, kalman_mode=False, kf=None):
+    def optimize_parameters(self, counter=0):
         # forward
         self.forward()
-        # G_A and G_B
-        self.optimizer_G.zero_grad()
-        self.backward_G()
-        self.optimizer_G.step()
-        # D_A
-        self.optimizer_D.zero_grad()
-        self.backward_D()
-        self.optimizer_D.step()
+        if counter % self.opt.artifcial_batch == 0:
+            # G_A and G_B
+            self.optimizer_G.zero_grad()
+            self.backward_G()
+            self.optimizer_G.step()
+            # D_A
+            self.optimizer_D.zero_grad()
+            self.backward_D()
+            self.optimizer_D.step()
+        else:
+            self.backward_G()
+            self.backward_D()
 
     def get_current_errors(self):
         ret_errors = OrderedDict(
